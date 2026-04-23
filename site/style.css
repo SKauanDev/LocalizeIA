@@ -1,0 +1,416 @@
+/* --- Variáveis de Cores e Tema --- */
+:root {
+    --primary: #480087; /* Verde estilo Advanced IP Scanner */
+    --primary-hover: #5f009e;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --bg-body: #ffffff;
+    --bg-hero: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+}
+
+/* --- Reset Básico --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+    cursor: default;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    width: 90%;
+    max-width: 1140px;
+    margin: 0 auto;
+}
+
+/* --- Cabeçalho --- */
+header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    padding: 15px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+.logo i {
+    color: var(--primary);
+    font-size: 28px;
+}
+
+/* Ajustes na Logo */
+.logo_top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text-main);
+}
+
+.logo-img {
+    height: 46px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+}
+
+.logo_top {
+    text-decoration: none;
+    color: var(--text-main);
+    cursor: pointer;
+}
+.menu a {
+    text-decoration: none;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 24px;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.menu a:hover {
+    color: var(--primary);
+}
+
+/* --- Seção Hero --- */
+.hero {
+    background: var(--bg-hero);
+    padding: 100px 0 120px;
+    overflow: hidden;
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 60px;
+}
+
+.hero-text {
+    flex: 1.1;
+}
+
+.badge {
+    display: inline-block;
+    background-color: #e8dcfc;
+    color: #480087;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hero-text h1 {
+    font-size: 3.2rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    color: #0f172a;
+}
+
+.hero-text p {
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+}
+
+/* Container que segura as duas imagens */
+.hero-images-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: -50px; /* Ajuste o gap negativo se quiser que elas se sobreponham um pouco */
+    position: relative;
+}
+
+.hero-image {
+    max-width: 500px; /* Ou o tamanho que preferir */
+    transition: transform 0.3s ease;
+}
+
+/* Imagem de cima: alinhada à esquerda (ou centro) */
+.img-top {
+    align-self: flex-start;
+    z-index: 2;
+    transform: translateX(-20px); /* Empurra um pouco para a esquerda */
+}
+
+/* Imagem de baixo: alinhada à direita e um pouco sobreposta */
+.img-bottom {
+    align-self: flex-end;
+    margin-top: -60px; /* Faz a imagem de baixo subir e ficar atrás da primeira */
+    z-index: 1;
+    transform: translateX(20px); /* Empurra um pouco para a direita */
+    opacity: 0.8; /* Opcional: dá um efeito de profundidade */
+}
+
+/* Efeito de flutuação suave (Opcional) */
+.hero-image:hover {
+    transform: translate(0, -10px) scale(1.02);
+    z-index: 10;
+    opacity: 1;
+}
+
+/* Mockup Style - Garanta que a imagem não escape */
+.browser-mockup img {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+/* --- Box de Download --- */
+.download-box {
+    display: inline-block;
+    cursor: pointer;
+}
+
+.btn-download {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: var(--primary);
+    color: #ffffff;
+    padding: 16px 32px;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 25px rgba(37, 0, 184, 0.3);
+    cursor: pointer;
+}
+
+.btn-download:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(37, 0, 184, 0.3);
+}
+
+.btn-download i {
+    font-size: 32px;
+}
+
+.btn-download strong {
+    display: block;
+    font-size: 1.2rem;
+}
+
+.btn-download span {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.security-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.security-note i {
+    color: var(--primary);
+    font-size: 16px;
+}
+
+/* --- Imagem Hero / Mockup --- */
+.hero-image {
+    flex: 1;
+}
+
+.browser-mockup {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: perspective(1000px) rotateY(-5deg);
+    transition: transform 0.5s ease;
+}
+
+.browser-mockup:hover {
+    transform: perspective(1000px) rotateY(0deg);
+}
+
+.browser-mockup img {
+    width: 100%;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+/* --- Seção de Funcionalidades --- */
+.features {
+    padding: 100px 0;
+    background-color: #ffffff;
+}
+
+.features-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.features-header h2 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+}
+
+.features-header p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.feature-card {
+    padding: 40px 30px;
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background-color: #efdcfc;
+    color: var(--primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 24px;
+}
+
+.feature-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    color: #0f172a;
+}
+
+.feature-card p {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+/* --- Rodapé --- */
+footer {
+    background-color: #0f172a;
+    color: #94a3b8;
+    padding: 50px 0 30px;
+    border-top: 5px solid var(--primary);
+}
+
+.footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.logo-footer {
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+.footer-links p {
+    font-size: 0.9rem;
+}
+
+.port_link {
+    color: #94a3b8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 992px) {
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .hero-text h1 {
+        font-size: 2.5rem;
+    }
+
+    .download-box {
+        margin: 0 auto;
+    }
+
+    .security-note {
+        justify-content: center;
+    }
+
+    .browser-mockup {
+        transform: none;
+        margin-top: 40px;
+    }
+
+    .browser-mockup:hover {
+        transform: none;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .footer-inner {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+    }
+}

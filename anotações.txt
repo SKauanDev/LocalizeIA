@@ -1,0 +1,7 @@
+# API DE BUSCA NO GOOGLE - https://serper.dev/playground
+# API KEY - 9c38afc635a29fd96851480cd0a836e03c0e10c7
+
+-----------------------------------------------------------
+# PARA COMPILAR WEB - npm run dev
+# PARA COMPILAR .EXE - npm run electron:dev 
+# PARA CRIAR .exe - npm run electron:build

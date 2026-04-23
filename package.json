@@ -1,0 +1,96 @@
+{
+  "name": "LocalizeIA",
+  "private": true,
+  "version": "1.0.5",
+  "description": "Agilize suas buscas com 1 clique",
+  "author": {
+    "name": "KSTech",
+    "email": "dev.skauan@gmail.com",
+    "url": "https://portf-lio-oficial-pearl.vercel.app/"
+  },
+  "homepage": "https://portf-lio-oficial-pearl.vercel.app/",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "api:dev": "node api/server.js",
+    "dev:full": "concurrently -k \"npm run api:dev\" \"npm run dev\" \"npm run dev:electron\"",
+    "dev:electron": "wait-on http://localhost:5173 && node scripts/run-electron-dev.mjs",
+    "electron:dev": "concurrently -k \"npm run dev\" \"npm run dev:electron\"",
+    "icon:generate": "node tools/generate-icon.mjs",
+    "playwright:install": "playwright install chromium",
+    "build": "vite build",
+    "electron:pack:win": "npm run icon:generate && npm run build && electron-builder --win --dir",
+    "electron:patch:exe": "node tools/patch-exe-icon.mjs",
+    "electron:build:installer": "electron-builder --win nsis --prepackaged executavel_localizeia/win-unpacked",
+    "electron:build": "npm run electron:pack:win && npm run electron:patch:exe && npm run electron:build:installer",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "lucide-react": "^0.575.0",
+    "playwright": "^1.58.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.2.1",
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "png-to-ico": "^3.0.1",
+    "postcss": "^8.5.6",
+    "rcedit": "^4.0.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^5.4.19",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.localizeia.desktop",
+    "productName": "LocalizeIA",
+    "directories": {
+      "output": "executavel_localizeia"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "LocalizeIA",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    }
+  }
+}

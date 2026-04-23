@@ -75,7 +75,7 @@ function App() {
   const [leads, setLeads] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
 
-  const pageSize = 8
+  const pageSize = 10
 
   useEffect(() => {
     async function loadStates() {
@@ -245,7 +245,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-base text-slate-200">
+    <div className="h-screen overflow-hidden bg-base text-slate-200">
       {completionNotice && (
         <div className="fixed right-5 top-5 z-50 flex max-w-sm items-center gap-3 rounded-xl border border-cyan-500/40 bg-slate-950 px-4 py-3 text-sm text-slate-100 shadow-2xl shadow-cyan-950/50">
           <BellRing size={18} className="text-cyan-300" />
@@ -253,8 +253,8 @@ function App() {
         </div>
       )}
 
-      <div className="mx-auto flex min-h-screen w-full max-w-[1800px] gap-6 p-6">
-        <aside className="w-full max-w-sm rounded-2xl border border-slate-700/60 bg-panel/95 p-5 shadow-2xl shadow-cyan-900/20">
+      <div className="mx-auto flex h-full w-full max-w-[1800px] gap-6 p-6">
+        <aside className="h-full w-full max-w-sm rounded-2xl border border-slate-700/60 bg-panel/95 p-5 shadow-2xl shadow-cyan-900/20">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-xl bg-cyan-500/15 p-2 text-cyan-300">
               <Building2 size={20} />
@@ -372,6 +372,30 @@ function App() {
               {searching ? 'Buscando...' : 'Buscar'}
             </button>
 
+            {leads.length > 0 && (
+              <div className="ml-auto flex w-fit items-center gap-1 rounded-md border border-slate-700 bg-slate-900/95 px-1.5 py-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded p-1 text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="min-w-12 text-center text-[11px] text-slate-400">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded p-1 text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+
             {searching && (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
                 <LoaderCircle size={16} className="animate-spin text-cyan-300" />
@@ -381,7 +405,7 @@ function App() {
           </form>
         </aside>
 
-        <main className="flex-1 rounded-2xl border border-slate-700/50 bg-panel/70 p-5">
+        <main className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-700/50 bg-panel/70 p-5">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-white">Resultados</h2>
@@ -395,7 +419,7 @@ function App() {
 
           {error && <div className="mb-3 rounded-lg border border-rose-700 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">{error}</div>}
 
-          <div className="overflow-hidden rounded-xl border border-slate-700">
+          <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-700">
             <table className="min-w-full border-collapse text-sm">
               <thead className="sticky top-0 bg-slate-900 text-slate-300">
                 <tr>
@@ -458,32 +482,6 @@ function App() {
               </tbody>
             </table>
           </div>
-
-          {leads.length > 0 && (
-            <div className="mt-3 flex justify-end">
-              <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/95 px-2 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-md p-1.5 text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span className="min-w-16 text-center text-xs text-slate-400">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="rounded-md p-1.5 text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
         </main>
       </div>
     </div>

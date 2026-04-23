@@ -9,6 +9,7 @@ const VITE_DEV_SERVER_URL = 'http://localhost:5173'
 const APP_USER_MODEL_ID = 'com.localizeia.desktop'
 const DEV_APP_USER_MODEL_ID = 'com.localizeia.desktop.dev'
 const CURRENT_APP_USER_MODEL_ID = app.isPackaged ? APP_USER_MODEL_ID : DEV_APP_USER_MODEL_ID
+const APP_ORIGINS = new Set([VITE_DEV_SERVER_URL])
 
 app.setName('LocalizeIA')
 if (process.platform === 'win32') {
@@ -59,6 +60,19 @@ function ensureWindowsAppShortcut() {
   })
 }
 
+function isExternalUrl(url) {
+  try {
+    if (url.startsWith('file://')) {
+      return false
+    }
+
+    const parsedUrl = new URL(url)
+    return !APP_ORIGINS.has(parsedUrl.origin)
+  } catch {
+    return false
+  }
+}
+
 function createMainWindow() {
   const mainWindow = new BrowserWindow({
     width: 1500,
@@ -82,6 +96,24 @@ function createMainWindow() {
     mainWindow.loadURL(VITE_DEV_SERVER_URL)
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isExternalUrl(url)) {
+      shell.openExternal(url)
+      return { action: 'deny' }
+    }
+
+    return { action: 'allow' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isExternalUrl(url)) {
+      return
+    }
+
+    event.preventDefault()
+    shell.openExternal(url)
+  })
 }
 
 app.whenReady().then(() => {

@@ -24,6 +24,26 @@
             </div>
             <nav class="menu">
                 <a href="#recursos">Recursos</a>
+
+                <span id="mobile-link-container"></span>
+
+                <script>
+                    // Função para verificar se é mobile
+                    function isMobile() {
+                        return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    }
+
+                    if (isMobile()) {
+                        const container = document.getElementById('mobile-link-container');
+                        // Cria o link dinamicamente
+                        const appLink = document.createElement('a');
+                        appLink.href = "/app";
+                        appLink.textContent = "Acesso Mobile";
+                        appLink.className = "mobile-only-link"; // Você pode estilizar no CSS se quiser
+                        
+                        container.appendChild(appLink);
+                    }
+                </script>
             </nav>
         </div>
     </header>

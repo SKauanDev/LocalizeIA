@@ -245,16 +245,16 @@ function App() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-base text-slate-200">
+    <div className="min-h-screen bg-base text-slate-200 lg:h-screen lg:overflow-hidden">
       {completionNotice && (
-        <div className="fixed right-5 top-5 z-50 flex max-w-sm items-center gap-3 rounded-xl border border-cyan-500/40 bg-slate-950 px-4 py-3 text-sm text-slate-100 shadow-2xl shadow-cyan-950/50">
+        <div className="fixed right-3 top-3 z-50 flex max-w-[calc(100vw-1.5rem)] items-center gap-3 rounded-xl border border-cyan-500/40 bg-slate-950 px-4 py-3 text-sm text-slate-100 shadow-2xl shadow-cyan-950/50 sm:right-5 sm:top-5 sm:max-w-sm">
           <BellRing size={18} className="text-cyan-300" />
           <span>{completionNotice}</span>
         </div>
       )}
 
-      <div className="mx-auto flex h-full w-full max-w-[1800px] gap-6 p-6">
-        <aside className="h-full w-full max-w-sm rounded-2xl border border-slate-700/60 bg-panel/95 p-5 shadow-2xl shadow-cyan-900/20">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-4 p-3 sm:p-4 lg:h-full lg:flex-row lg:gap-6 lg:p-6">
+        <aside className="w-full rounded-2xl border border-slate-700/60 bg-panel/95 p-4 shadow-2xl shadow-cyan-900/20 sm:p-5 lg:h-full lg:max-w-sm">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-xl bg-cyan-500/15 p-2 text-cyan-300">
               <Building2 size={20} />
@@ -373,7 +373,7 @@ function App() {
             </button>
 
             {leads.length > 0 && (
-              <div className="ml-auto flex w-fit items-center gap-1 rounded-md border border-slate-700 bg-slate-900/95 px-1.5 py-1">
+              <div className="ml-auto flex w-fit items-center gap-1 self-end rounded-md border border-slate-700 bg-slate-900/95 px-1.5 py-1">
                 <button
                   type="button"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -405,7 +405,7 @@ function App() {
           </form>
         </aside>
 
-        <main className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-700/50 bg-panel/70 p-5">
+        <main className="flex flex-1 flex-col rounded-2xl border border-slate-700/50 bg-panel/70 p-4 sm:p-5 lg:min-h-0">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-white">Resultados</h2>
@@ -419,7 +419,69 @@ function App() {
 
           {error && <div className="mb-3 rounded-lg border border-rose-700 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">{error}</div>}
 
-          <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-700">
+          <div className="space-y-3 lg:hidden">
+            {leads.length === 0 && !searching ? (
+              <div className="rounded-xl border border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+                Faca uma busca para listar empresas B2B.
+              </div>
+            ) : (
+              paginatedLeads.map((lead, index) => (
+                <article key={`${lead.companyName}-${index}`} className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold text-slate-100">{lead.companyName}</h3>
+                    <p className="mt-1 text-xs text-slate-400">{lead.source}</p>
+                  </div>
+
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">WhatsApp</p>
+                      {buildWhatsAppLink(lead.phone) ? (
+                        <a
+                          href={buildWhatsAppLink(lead.phone)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-300 hover:text-emerald-200"
+                        >
+                          {lead.phone}
+                        </a>
+                      ) : (
+                        <span className="text-slate-500">-</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Instagram</p>
+                      {lead.instagram !== '-' ? (
+                        <a href={lead.instagram} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-cyan-200">
+                          Abrir Instagram
+                        </a>
+                      ) : (
+                        <span className="text-slate-500">-</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Site</p>
+                      {lead.website !== '-' ? (
+                        <a href={lead.website} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-cyan-200">
+                          Site
+                        </a>
+                      ) : (
+                        <span className="text-slate-500">-</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Endereco</p>
+                      <p className="text-slate-300">{lead.address || '-'}</p>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden min-h-0 flex-1 overflow-auto rounded-xl border border-slate-700 lg:block">
             <table className="min-w-full border-collapse text-sm">
               <thead className="sticky top-0 bg-slate-900 text-slate-300">
                 <tr>

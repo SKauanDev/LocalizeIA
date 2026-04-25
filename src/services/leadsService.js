@@ -28,16 +28,42 @@ function sanitizeLead(lead) {
   }
 }
 
-export async function searchLeads({ niche, city, uf }) {
-  if (!window.desktop?.searchLeads) {
-    return {
-      warning:
-        'Busca local indisponivel neste contexto. Abra a janela do Electron (nao a aba http://localhost:5173 no navegador).',
-      leads: [],
-    }
+function getLeadsApiUrl() {
+  const configuredUrl = import.meta.env.VITE_LEADS_API_URL?.trim()
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, '')
   }
 
-  const rawLeads = await window.desktop.searchLeads({ niche, city, uf })
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3030'
+  }
+
+  return window.location.origin
+}
+
+async function searchLeadsFromApi({ niche, city, uf }) {
+  const response = await fetch(`${getLeadsApiUrl()}/search-leads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ niche, city, uf }),
+  })
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Falha ao buscar empresas na API.')
+  }
+
+  return payload.leads
+}
+
+export async function searchLeads({ niche, city, uf }) {
+  const rawLeads = window.desktop?.searchLeads
+    ? await window.desktop.searchLeads({ niche, city, uf })
+    : await searchLeadsFromApi({ niche, city, uf })
+
   const leads = Array.isArray(rawLeads) ? rawLeads.map(sanitizeLead) : []
 
   return {

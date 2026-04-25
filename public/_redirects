@@ -1,5 +1,5 @@
 # 1. Site inicial
-/       /site/index.html   200
+/       /site/index.html   200!
 
 # 2. Acesso direto ao app React
 /app    /app/index.html    200

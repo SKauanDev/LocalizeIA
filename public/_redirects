@@ -2,7 +2,8 @@
 /       /site/index.html   200
 
 # 2. Acesso direto ao app React
-/app    /app.html          200
+/app    /app/index.html    200
+/app/   /app/index.html    200
 
 # 3. Fallback para rotas do React nao darem 404
 /*      /index.html       200

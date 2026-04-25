@@ -6,7 +6,7 @@
     },
     {
       "source": "/app",
-      "destination": "/app.html"
+      "destination": "/app/"
     }
   ]
 }

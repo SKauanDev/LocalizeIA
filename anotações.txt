@@ -5,3 +5,8 @@
 # PARA COMPILAR WEB - npm run dev
 # PARA COMPILAR .EXE - npm run electron:dev 
 # PARA CRIAR .exe - npm run electron:build
+
+# Git Commit
+  ---> git add .
+  ---> git commit -m "add mobile" 
+  ---> git push origin main --force

@@ -2,7 +2,7 @@
 /    /site/index.html   200
 
 # 2. localizeia
-/web /index.html       200
+/   /index.html       200
 
 # 3. Fallback para rotas do React não darem 404
 /* /index.html       200

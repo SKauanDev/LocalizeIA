@@ -1,8 +1,5 @@
-# 1. site
-/    /site/index.html   200
+# 1. Site inicial
+/       /site/index.html   200
 
-# 2. localizeia
-/   /index.html       200
-
-# 3. Fallback para rotas do React não darem 404
-/* /index.html       200
+# 2. Fallback para rotas do React nao darem 404
+/*      /index.html       200

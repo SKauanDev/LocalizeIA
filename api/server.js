@@ -35,3 +35,22 @@ app.post('/search-leads', async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`LocalizeIA Leads API online em http://0.0.0.0:${port}`)
 })
+
+const browser = await playwright.chromium.launch({
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage', // Vital para ambientes com pouca RAM
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--single-process', // Ajuda a economizar memória
+    '--disable-gpu'
+  ]
+});
+
+const port = process.env.PORT || process.env.LEADS_API_PORT || 3030;
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`API rodando na porta ${port}`);
+});

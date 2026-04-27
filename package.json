@@ -19,13 +19,15 @@
     "electron:dev": "concurrently -k \"npm run dev\" \"npm run dev:electron\"",
     "icon:generate": "node tools/generate-icon.mjs",
     "playwright:install": "playwright install chromium",
+    "build-api": "npm install && npx playwright install chromium --with-deps",
     "build": "vite build",
     "electron:pack:win": "npm run icon:generate && npm run build && electron-builder --win --dir",
     "electron:patch:exe": "node tools/patch-exe-icon.mjs",
     "electron:build:installer": "electron-builder --win nsis --prepackaged executavel_localizeia/win-unpacked",
     "electron:build": "npm run electron:pack:win && npm run electron:patch:exe && npm run electron:build:installer",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start-api": "node api/server.js"
   },
   "dependencies": {
     "axios": "^1.13.5",

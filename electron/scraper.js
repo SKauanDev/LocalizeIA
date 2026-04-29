@@ -261,17 +261,20 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     // BLOQUEADOR DE IMAGENS (Essencial para não estourar a RAM no Render)
     await listPage.route('**/*', (route) => {
       const type = route.request().resourceType();
+      const url = route.request().url();
+
+      // 1. Bloqueia por tipo de recurso
       if (['image', 'media', 'font'].includes(type)) {
-        route.abort();
-      } else {
-        route.continue();
+        return route.abort().catch(() => {});
       }
 
-      // Bloqueia anúncios e trackers que o Google Maps carrega
-      const url = route.request().url();
+      // 2. Bloqueia por URL (trackers e analytics)
       if (url.includes('google-analytics') || url.includes('doubleclick') || url.includes('fonts.')) {
-        return route.abort();
+        return route.abort().catch(() => {});
       }
+
+      // 3. Se não entrou nos filtros acima, continua
+      return route.continue().catch(() => {});
     });
 
     listPage.setDefaultTimeout(PANEL_TIMEOUT_MS);

@@ -80,10 +80,9 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
           .filter(t => t.length > 0);
         
         // 1. Identificar Telefone: Procuro por parênteses ou traço de número
-        const phone = allTexts.find(t => 
-          /\(\d{2}\)/.test(t) || // Tem DDD entre parênteses
-          /\d{4,5}-\d{4}/.test(t) // Tem formato de telefone com traço
-        ) || '-';
+        const rawCardText = card.innerText || "";
+        const phoneMatch = rawCardText.match(/\(\d{2}\)\s\d{4,5}-\d{4}/);
+        const phone = phoneMatch ? phoneMatch[0] : "-";
 
         // 2. Identificar Endereço: Geralmente é o texto longo que NÃO tem parênteses
         // e não é o nome da categoria (como "Restaurante")

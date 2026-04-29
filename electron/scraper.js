@@ -6,8 +6,11 @@ const USER_AGENTS = [
 ];
 
 // Configuracoes otimizadas para o Render Free (512MB)
+const SEARCH_TIMEOUT_MS = 30000;
+const PANEL_TIMEOUT_MS = 12000;
 const MAX_RESULTS = 15;
 const MAX_SCROLL_STEPS = 10;
+const MAX_DETAIL_RESULTS = 10;
 
 async function safeText(locator) {
   try {
@@ -36,23 +39,32 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       headless: true,
       args: [
         '--no-sandbox',
+        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--single-process',
         '--disable-gpu',
-        '--no-zygote'
+        '--no-zygote',
+        '--disable-extensions'
       ]
     });
 
     const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 },
-      userAgent: USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
+      viewport: { width: 800, height: 600 },
+      userAgent: USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+      locale: 'pt-BR',
+      timezoneId: 'America/Sao_Paulo'
     });
 
     const page = await context.newPage();
+    page.setDefaultTimeout(PANEL_TIMEOUT_MS);
 
     await page.route('**/*', (route) => {
       const type = route.request().resourceType();
+      const url = route.request().url();
       if (['image', 'media', 'font'].includes(type)) {
+        return route.abort().catch(() => {});
+      }
+      if (url.includes('google-analytics') || url.includes('doubleclick') || url.includes('fonts.')) {
         return route.abort().catch(() => {});
       }
       return route.continue().catch(() => {});
@@ -60,13 +72,13 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
 
     const query = encodeURIComponent(`${niche} em ${city}, ${uf}`);
     await page.goto(`https://www.google.com.br/maps/search/${query}`, {
-      waitUntil: 'networkidle',
-      timeout: 30000
+      waitUntil: 'domcontentloaded',
+      timeout: SEARCH_TIMEOUT_MS
     });
 
     const feedSelector = 'div[role="feed"]';
     try {
-      await page.waitForSelector(feedSelector, { timeout: 10000 });
+      await page.waitForSelector(feedSelector, { timeout: PANEL_TIMEOUT_MS });
       for (let i = 0; i < MAX_SCROLL_STEPS; i++) {
         await page.evaluate((sel) => {
           const el = document.querySelector(sel);
@@ -103,6 +115,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     }
 
     const detailPage = await context.newPage();
+    detailPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
     await detailPage.route('**/*', (route) => {
       const type = route.request().resourceType();
       if (['image', 'media', 'font'].includes(type)) {
@@ -113,14 +126,14 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
 
     const leads = [];
 
-    for (const placeLink of placeLinks) {
+    for (const placeLink of placeLinks.slice(0, MAX_DETAIL_RESULTS)) {
       try {
         await detailPage.goto(placeLink, {
           waitUntil: 'domcontentloaded',
-          timeout: 30000
+          timeout: SEARCH_TIMEOUT_MS
         });
 
-        await detailPage.locator('h1').first().waitFor({ timeout: 10000 });
+        await detailPage.locator('h1').first().waitFor({ timeout: PANEL_TIMEOUT_MS });
 
         const name =
           (await safeText(detailPage.locator('h1.DUwDvf'))) ||
@@ -152,6 +165,8 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     }
 
     await detailPage.close();
+    await page.close();
+    await context.close();
     return leads;
   } finally {
     if (browser) await browser.close();

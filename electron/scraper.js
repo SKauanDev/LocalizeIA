@@ -1,4 +1,4 @@
-﻿import { chromium } from 'playwright-extra'
+﻿import { chromium } from 'playwright'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { existsSync } from 'node:fs'
 

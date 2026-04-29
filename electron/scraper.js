@@ -224,21 +224,32 @@ async function extractLeadFromDetailPage(detailPage, queryLabel) {
 
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   if (!niche || !city || !uf) {
-    throw new Error('Parametros obrigatorios: niche, city, uf')
+    throw new Error('Parametros obrigatorios: niche, city, uf');
   }
 
-  let browser
+  // 1. DECLARAR A VARIÁVEL APENAS UMA VEZ
+  let browser;
+
   try {
-    browser = await chromium.launch(resolveBrowserLaunchOptions())
+    // 2. INICIALIZAR COM ARGUMENTOS DE ECONOMIA DE MEMÓRIA
+    // Usei os argumentos que cabem nos 512MB do Render
+    browser = await playwright.chromium.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process',
+        '--disable-gpu',
+        '--no-zygote'
+      ]
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new Error(
-      `Nao foi possivel iniciar navegador para scraping. Instale o Google Chrome ou defina LOCALIZEIA_CHROME_PATH. Detalhe: ${message}`,
-    )
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Erro ao iniciar navegador: ${message}`);
   }
 
-  const query = `${niche} em ${city}, ${uf}`
-  const userAgent = pickRandomUserAgent()
+  const query = `${niche} em ${city}, ${uf}`;
+  const userAgent = pickRandomUserAgent();
 
   try {
     const context = await browser.newContext({
@@ -246,84 +257,95 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       viewport: { width: 1366, height: 768 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
-    })
+    });
 
-    const listPage = await context.newPage()
-    listPage.setDefaultTimeout(PANEL_TIMEOUT_MS)
+    const listPage = await context.newPage();
+    
+    // BLOQUEADOR DE IMAGENS (Essencial para não estourar a RAM no Render)
+    await listPage.route('**/*', (route) => {
+      const type = route.request().resourceType();
+      if (['image', 'media', 'font'].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
 
-    await listPage.goto('https://www.google.com/maps', {
+    listPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
+
+    await listPage.goto('https://www.google.com.br/maps', {
       waitUntil: 'domcontentloaded',
       timeout: SEARCH_TIMEOUT_MS,
-    })
-    await acceptConsentIfPresent(listPage)
+    });
 
-    const searchInput = listPage.locator('#searchboxinput')
-    const inputVisible = await searchInput.isVisible({ timeout: 5000 }).catch(() => false)
+    await acceptConsentIfPresent(listPage);
+
+    const searchInput = listPage.locator('#searchboxinput');
+    const inputVisible = await searchInput.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (inputVisible) {
-      await searchInput.fill(query)
-      await searchInput.press('Enter')
+      await searchInput.fill(query);
+      await searchInput.press('Enter');
     } else {
-      const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`
+      const searchUrl = `https://www.google.com.br/maps/search/${encodeURIComponent(query)}`;
       await listPage.goto(searchUrl, {
         waitUntil: 'domcontentloaded',
         timeout: SEARCH_TIMEOUT_MS,
-      })
-      await acceptConsentIfPresent(listPage)
+      });
+      await acceptConsentIfPresent(listPage);
     }
 
-    const feed = listPage.locator('div[role="feed"]').first()
-    await feed.waitFor({ timeout: SEARCH_TIMEOUT_MS })
+    const feed = listPage.locator('div[role="feed"]').first();
+    await feed.waitFor({ timeout: SEARCH_TIMEOUT_MS });
 
-    const placeLinks = await collectUniquePlaceLinks(listPage)
+    const placeLinks = await collectUniquePlaceLinks(listPage);
 
     if (placeLinks.length === 0) {
-      await context.close()
-      return []
+      await context.close();
+      return [];
     }
 
-    const detailPage = await context.newPage()
-    detailPage.setDefaultTimeout(PANEL_TIMEOUT_MS)
+    const detailPage = await context.newPage();
+    
+    // Bloquear imagens na página de detalhes também
+    await detailPage.route('**/*', (route) => {
+      if (['image', 'media', 'font'].includes(route.request().resourceType())) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
 
-    const leads = []
-    for (const placeLink of placeLinks) {
+    detailPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
+
+    const leads = [];
+    // Limitar para no máximo 10 leads no plano FREE para não travar
+    const limitedLinks = placeLinks.slice(0, 10);
+
+    for (const placeLink of limitedLinks) {
       try {
         await detailPage.goto(placeLink, {
           waitUntil: 'domcontentloaded',
           timeout: SEARCH_TIMEOUT_MS,
-        })
-        await detailPage.locator('h1').first().waitFor({ timeout: PANEL_TIMEOUT_MS })
-        const lead = await extractLeadFromDetailPage(detailPage, `${city}/${uf}`)
+        });
+        await detailPage.locator('h1').first().waitFor({ timeout: PANEL_TIMEOUT_MS });
+        const lead = await extractLeadFromDetailPage(detailPage, `${city}/${uf}`);
         if (isUsefulLead(lead)) {
-          leads.push(lead)
+          leads.push(lead);
         }
       } catch {
-        // Skip individual failures to keep scraper stable.
+        // Ignora falhas individuais
       }
     }
 
-    await detailPage.close()
-    await context.close()
+    await detailPage.close();
+    await context.close();
 
-    return dedupeLeads(leads).slice(0, MAX_RESULTS)
+    return dedupeLeads(leads);
   } finally {
+    // 3. FECHAR O NAVEGADOR SEMPRE
     if (browser) {
-      await browser.close()
+      await browser.close();
     }
   }
-
-  const browser = await playwright.chromium.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage', // Usa /tmp em vez de memória compartilhada (Essencial!)
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process', // Roda tudo em um processo só para economizar RAM
-      '--disable-gpu',
-      '--disable-extensions'
-    ]
-  });
 }
-

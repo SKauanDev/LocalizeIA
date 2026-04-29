@@ -74,27 +74,28 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         const nameElement = card.querySelector('.fontHeadlineSmall');
         const name = nameElement?.textContent?.trim() || 'Empresa sem nome';
         
-        // Captura todos os textos para achar o telefone
-        const allTexts = Array.from(card.querySelectorAll('span, div'))
-          .map(el => el.textContent.trim());
+        // Pegamos todos os textos dentro do card para filtrar
+        const allTexts = Array.from(card.querySelectorAll('.fontBodyMedium span, .fontBodyMedium div'))
+          .map(el => el.textContent.trim())
+          .filter(t => t.length > 0);
         
-        // Regex para (XX) 9XXXX-XXXX ou (XX) XXXX-XXXX
-        const phone = allTexts.find(t => /\(\d{2}\)\s\d/.test(t) || /\d{4,5}-\d{4}/.test(t)) || '-';
+        // 1. Identificar Telefone: Procuro por parênteses ou traço de número
+        const phone = allTexts.find(t => /\(\d{2}\)/.test(t)) || '-';
 
-        let whatsapp = '-';
-        if (phone !== '-') {
-          const onlyNums = phone.replace(/\D/g, '');
-          if (onlyNums.length >= 10) {
-            whatsapp = `https://wa.me/55${onlyNums}`;
-          }
-        }
+        // 2. Identificar Endereço: Geralmente é o texto longo que NÃO tem parênteses
+        // e não é o nome da categoria (como "Restaurante")
+        const address = allTexts.find(t => 
+          t.length > 10 && 
+          !t.includes('(') && 
+          !t.includes('·') &&
+          t !== name
+        ) || '-';
 
-        // Retornamos apenas se tiver nome válido
         if (name !== 'Empresa sem nome') {
           results.push({
             companyName: name,
-            phone: phone,
-            whatsapp: whatsapp,
+            phone: phone, // O seu front-end precisa disso para o WhatsApp
+            address: address, // O seu front-end precisa disso para o campo endereço
             source: 'Google Maps'
           });
         }

@@ -311,5 +311,19 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       await browser.close()
     }
   }
+
+  const browser = await playwright.chromium.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage', // Usa /tmp em vez de memória compartilhada (Essencial!)
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process', // Roda tudo em um processo só para economizar RAM
+      '--disable-gpu',
+      '--disable-extensions'
+    ]
+  });
 }
 

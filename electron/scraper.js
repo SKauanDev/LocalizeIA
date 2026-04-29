@@ -5,12 +5,30 @@ const USER_AGENTS = [
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.184 Safari/537.36',
 ];
 
-// Configurações otimizadas para o Render Free (512MB)
-const MAX_RESULTS = 15; 
-const MAX_SCROLL_STEPS = 10; 
+// Configuracoes otimizadas para o Render Free (512MB)
+const MAX_RESULTS = 15;
+const MAX_SCROLL_STEPS = 10;
+
+async function safeText(locator) {
+  try {
+    const value = await locator.first().textContent({ timeout: 2000 });
+    return value?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function safeAttribute(locator, attr) {
+  try {
+    const value = await locator.first().getAttribute(attr, { timeout: 2000 });
+    return value?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
-  if (!niche || !city || !uf) throw new Error('Parâmetros inválidos');
+  if (!niche || !city || !uf) throw new Error('Parametros invalidos');
 
   let browser;
   try {
@@ -32,7 +50,6 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
 
     const page = await context.newPage();
 
-    // Bloqueio de RAM Safe (Imagens e CSS pesados)
     await page.route('**/*', (route) => {
       const type = route.request().resourceType();
       if (['image', 'media', 'font'].includes(type)) {
@@ -43,12 +60,10 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
 
     const query = encodeURIComponent(`${niche} em ${city}, ${uf}`);
     await page.goto(`https://www.google.com.br/maps/search/${query}`, {
-      waitUntil: 'networkidle', 
+      waitUntil: 'networkidle',
       timeout: 30000
     });
 
-    // --- PASSO 1: Scroll para carregar os resultados ---
-    // Sem isso, o page.evaluate não encontrará nada além dos 2 ou 3 primeiros
     const feedSelector = 'div[role="feed"]';
     try {
       await page.waitForSelector(feedSelector, { timeout: 10000 });
@@ -57,58 +72,87 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
           const el = document.querySelector(sel);
           if (el) el.scrollBy(0, 800);
         }, feedSelector);
-        await page.waitForTimeout(500); // Espera curta para carregar
+        await page.waitForTimeout(500);
       }
-    } catch (e) {
-      console.log("Aviso: Feed de resultados não encontrado ou busca sem retorno.");
+    } catch {
+      console.log('Aviso: Feed de resultados nao encontrado ou busca sem retorno.');
     }
 
-    // --- PASSO 2: Extração dos Dados ---
-    const leads = await page.evaluate(({ maxRes }) => {
-      const results = [];
-      const cards = document.querySelectorAll('div[role="article"]');
-      
-      for (const card of cards) {
-        if (results.length >= maxRes) break;
+    const placeLinks = await page.evaluate(({ maxRes }) => {
+      const links = [];
+      const seen = new Set();
+      const anchors = document.querySelectorAll('div[role="feed"] a[href*="/place/"]');
 
-        const nameElement = card.querySelector('.fontHeadlineSmall');
-        const name = nameElement?.textContent?.trim() || 'Empresa sem nome';
-        
-        // Pegamos todos os textos dentro do card para filtrar
-        const allTexts = Array.from(card.querySelectorAll('.fontBodyMedium span, .fontBodyMedium div'))
-          .map(el => el.textContent.trim())
-          .filter(t => t.length > 0);
-        
-        // 1. Identificar Telefone: Procuro por parênteses ou traço de número
-        const rawCardText = card.innerText || "";
-        const phoneMatch = rawCardText.match(/\(\d{2}\)\s\d{4,5}-\d{4}/);
-        const phone = phoneMatch ? phoneMatch[0] : "-";
+      for (const anchor of anchors) {
+        if (links.length >= maxRes) break;
 
-        // 2. Identificar Endereço: Geralmente é o texto longo que NÃO tem parênteses
-        // e não é o nome da categoria (como "Restaurante")
-        const address = allTexts.find(t => 
-          t.length > 10 && 
-          !t.includes('(') && 
-          !t.includes('·') &&
-          !t.includes('aberto') &&
-          !t.includes('fechado') &&
-          t !== name
-        ) || '-';
+        const href = anchor.getAttribute('href');
+        if (!href || seen.has(href)) {
+          continue;
+        }
+
+        seen.add(href);
+        links.push(href);
+      }
+
+      return links;
+    }, { maxRes: MAX_RESULTS });
+
+    if (placeLinks.length === 0) {
+      return [];
+    }
+
+    const detailPage = await context.newPage();
+    await detailPage.route('**/*', (route) => {
+      const type = route.request().resourceType();
+      if (['image', 'media', 'font'].includes(type)) {
+        return route.abort().catch(() => {});
+      }
+      return route.continue().catch(() => {});
+    });
+
+    const leads = [];
+
+    for (const placeLink of placeLinks) {
+      try {
+        await detailPage.goto(placeLink, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
+
+        await detailPage.locator('h1').first().waitFor({ timeout: 10000 });
+
+        const name =
+          (await safeText(detailPage.locator('h1.DUwDvf'))) ||
+          (await safeText(detailPage.locator('h1.fontHeadlineLarge'))) ||
+          'Empresa sem nome';
+
+        const phone =
+          (await safeText(detailPage.locator('button[data-item-id^="phone:tel:"] div.fontBodyMedium'))) ||
+          (await safeText(detailPage.locator('button[data-item-id*="phone"] div.fontBodyMedium'))) ||
+          (await safeAttribute(detailPage.locator('button[data-item-id^="phone:tel:"]'), 'data-item-id'))?.replace(/^phone:tel:/, '') ||
+          '-';
+
+        const address =
+          (await safeText(detailPage.locator('button[data-item-id="address"] div.fontBodyMedium'))) ||
+          (await safeText(detailPage.locator('button[data-item-id*="address"] div.fontBodyMedium'))) ||
+          '-';
 
         if (name !== 'Empresa sem nome') {
-          results.push({
+          leads.push({
             companyName: name,
-            phone: phone, // O seu front-end precisa disso para o WhatsApp funcionar
-            address: address, // O seu front-end precisa disso para o campo endereço
+            phone,
+            address,
             source: 'Google Maps'
           });
         }
+      } catch {
+        // Ignora falhas individuais e segue.
       }
-      return results;
-    }, { maxRes: MAX_RESULTS });
+    }
 
+    await detailPage.close();
     return leads;
-
   } finally {
     if (browser) await browser.close();
   }

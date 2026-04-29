@@ -228,7 +228,8 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   try {
     // 2. INICIALIZAR COM ARGUMENTOS DE ECONOMIA DE MEMÓRIA
     // Usei os argumentos que cabem nos 512MB do Render
-    browser = await playwright.chromium.launch({
+    browser = await chromium.launch({
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

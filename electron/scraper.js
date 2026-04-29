@@ -49,6 +49,57 @@ function normalizePhone(rawPhone) {
   return rawPhone;
 }
 
+async function extractPhoneFromDetailPage(detailPage, fallbackPhone = '-') {
+  const directPhone =
+    (await safeText(detailPage.locator('button[data-item-id^="phone:tel:"] div.fontBodyMedium'))) ||
+    (await safeText(detailPage.locator('button[data-item-id*="phone"] div.fontBodyMedium'))) ||
+    (await safeText(detailPage.locator('a[href^="tel:"]'))) ||
+    (await safeAttribute(detailPage.locator('button[data-item-id^="phone:tel:"]'), 'data-item-id'))?.replace(/^phone:tel:/, '') ||
+    (await safeAttribute(detailPage.locator('a[href^="tel:"]'), 'href'))?.replace(/^tel:/, '');
+
+  if (directPhone && directPhone !== '-') {
+    return normalizePhone(directPhone);
+  }
+
+  const extractedPhone = await detailPage.evaluate(() => {
+    const phonePattern = /(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?\d{4,5}-?\d{4}/;
+    const candidates = [];
+
+    const selectors = [
+      '[data-item-id*="phone"]',
+      'button[aria-label*="telefone" i]',
+      'button[aria-label*="phone" i]',
+      'a[href^="tel:"]',
+      '[aria-label*="telefone" i]',
+      '[aria-label*="phone" i]',
+    ];
+
+    for (const selector of selectors) {
+      for (const element of document.querySelectorAll(selector)) {
+        candidates.push(
+          element.getAttribute('data-item-id') || '',
+          element.getAttribute('aria-label') || '',
+          element.getAttribute('href') || '',
+          element.textContent || ''
+        );
+      }
+    }
+
+    candidates.push(document.body?.innerText || '');
+
+    for (const candidate of candidates) {
+      const match = candidate.match(phonePattern);
+      if (match) {
+        return match[0];
+      }
+    }
+
+    return null;
+  }).catch(() => null);
+
+  return normalizePhone(extractedPhone || fallbackPhone);
+}
+
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   if (!niche || !city || !uf) throw new Error('Parametros invalidos');
 
@@ -193,11 +244,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
           (await safeText(detailPage.locator('h1.fontHeadlineLarge'))) ||
           'Empresa sem nome';
 
-        const phone =
-          (await safeText(detailPage.locator('button[data-item-id^="phone:tel:"] div.fontBodyMedium'))) ||
-          (await safeText(detailPage.locator('button[data-item-id*="phone"] div.fontBodyMedium'))) ||
-          (await safeAttribute(detailPage.locator('button[data-item-id^="phone:tel:"]'), 'data-item-id'))?.replace(/^phone:tel:/, '') ||
-          entry.phone;
+        const phone = await extractPhoneFromDetailPage(detailPage, entry.phone);
 
         const address =
           (await safeText(detailPage.locator('button[data-item-id="address"] div.fontBodyMedium'))) ||
@@ -207,7 +254,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         if (name !== 'Empresa sem nome') {
           leads.push({
             companyName: name,
-            phone: normalizePhone(phone),
+            phone,
             address,
             source: 'Google Maps'
           });

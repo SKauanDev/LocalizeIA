@@ -219,7 +219,7 @@ async function extractLeadFromDetailPage(detailPage, queryLabel) {
 
 
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
-  if (!niche || !city || !uf) throw new Error('Parâmetros obrigatórios ausentes');
+  if (!niche || !city || !uf) throw new Error('Parâmetros inválidos');
 
   let browser;
   try {
@@ -230,65 +230,76 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         '--disable-dev-shm-usage',
         '--single-process',
         '--disable-gpu',
-        '--no-zygote'
       ]
     });
 
+    // CORREÇÃO DO ERRO DE NOTIFICAÇÃO: Concede permissão falsa para o Maps não tentar criar notificações
     const context = await browser.newContext({
-      viewport: { width: 800, height: 600 }
+      viewport: { width: 1000, height: 800 },
+      permissions: ['notifications'] 
     });
 
     const page = await context.newPage();
 
-    // BLOQUEIO TOTAL DE PESO MORTO
+    // Bloqueio de peso (Mantido para economizar RAM)
     await page.route('**/*', (route) => {
       const type = route.request().resourceType();
-      if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
-        return route.abort().catch(() => {});
-      }
+      if (['image', 'font', 'media'].includes(type)) return route.abort().catch(() => {});
       return route.continue().catch(() => {});
     });
 
     const query = encodeURIComponent(`${niche} em ${city}, ${uf}`);
     await page.goto(`https://www.google.com.br/maps/search/${query}`, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle', // Espera um pouco mais para os dados carregarem
       timeout: 30000
     });
 
-    // Espera a lista de resultados carregar
-    await page.waitForSelector('div[role="feed"]', { timeout: 15000 });
+    // Rola um pouco o feed para carregar mais dados
+    const feedSelector = 'div[role="feed"]';
+    try {
+      await page.waitForSelector(feedSelector, { timeout: 10000 });
+      await page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        if (el) el.scrollBy(0, 1000);
+      }, feedSelector);
+      await page.waitForTimeout(1000);
+    } catch (e) {}
 
-    // EXTRAÇÃO DIRETA DA LISTA (Sem clicar em nada)
+    // EXTRAÇÃO COM SELETORES MELHORADOS
     const leads = await page.evaluate(() => {
       const results = [];
-      const cards = document.querySelectorAll('div[role="article"]'); // Seleciona os cards de empresa
+      const cards = document.querySelectorAll('div[role="article"]');
       
       cards.forEach((card) => {
-        const name = card.querySelector('div.fontHeadlineSmall')?.textContent || 'Empresa sem nome';
-        const info = card.querySelectorAll('div.fontBodyMedium');
+        const name = card.querySelector('.fontHeadlineSmall')?.textContent || 'Empresa sem nome';
         
-        // O Google coloca telefone e endereço em divs com a mesma classe na lista
-        let phone = '-';
-        let address = '-';
+        // O endereço geralmente é a primeira div com texto após o nome
+        const allDivs = Array.from(card.querySelectorAll('.fontBodyMedium div')).map(el => el.textContent);
         
-        info.forEach(el => {
-          const text = el.textContent || '';
-          if (text.includes('(') && text.match(/\d/)) phone = text; // Tenta identificar telefone
-          if (text.length > 10 && !text.includes('(')) address = text; // Tenta identificar endereço
-        });
+        // Filtra para remover notas (ex: "4.5 (120)") e focar no que parece endereço
+        const possibleAddress = allDivs.find(t => t.length > 10 && !t.includes('(')) || '-';
+        
+        // Telefone costuma ter o formato de (XX) XXXX-XXXX
+        const phone = allDivs.find(t => /\(\d{2}\)/.test(t)) || '-';
 
-        results.push({
-          companyName: name,
-          phone: phone,
-          address: address,
-          website: '-', // Na lista lateral o link do site raramente é visível
-          source: 'Google Maps (Lista Rápida)'
-        });
+        // Tenta pegar o link do site se estiver visível no card
+        const website = card.querySelector('a[aria-label*="website"], a[href^="http"]')?.getAttribute('href') || '-';
+
+        if (name !== 'Empresa sem nome') {
+          results.push({
+            companyName: name,
+            phone: phone,
+            address: possibleAddress,
+            website: website,
+            instagram: website.includes('instagram.com') ? website : '-',
+            source: 'Google Maps (Busca Otimizada)'
+          });
+        }
       });
       return results;
     });
 
-    return leads.slice(0, 15); // Retorna até 15 leads encontrados na lista
+    return leads;
   } finally {
     if (browser) await browser.close();
   }

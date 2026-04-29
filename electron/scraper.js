@@ -233,10 +233,11 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
+        '--disable-dev-shm-usage', // Crítico para o Render
         '--disable-gpu',
-        '--no-zygote'
+        '--no-zygote',
+        '--single-process', // Economiza muita RAM
+        '--disable-extensions',
       ]
     });
   } catch (error) {
@@ -250,7 +251,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   try {
     const context = await browser.newContext({
       userAgent,
-      viewport: { width: 1366, height: 768 },
+      viewport: { width: 800, height: 600 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
     });
@@ -264,6 +265,12 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         route.abort();
       } else {
         route.continue();
+      }
+
+      // Bloqueia anúncios e trackers que o Google Maps carrega
+      const url = route.request().url();
+      if (url.includes('google-analytics') || url.includes('doubleclick') || url.includes('fonts.')) {
+        return route.abort();
       }
     });
 

@@ -1,5 +1,4 @@
 ﻿import { chromium } from 'playwright'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { existsSync } from 'node:fs'
 
 chromium.use(StealthPlugin())
@@ -13,7 +12,7 @@ const USER_AGENTS = [
 
 const SEARCH_TIMEOUT_MS = 30000
 const PANEL_TIMEOUT_MS = 12000
-const MAX_RESULTS = 25
+const MAX_RESULTS = 19
 const MAX_SCROLL_STEPS = 28
 const MAX_IDLE_SCROLLS = 5
 

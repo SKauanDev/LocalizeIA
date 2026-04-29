@@ -19,7 +19,6 @@
     "electron:dev": "concurrently -k \"npm run dev\" \"npm run dev:electron\"",
     "icon:generate": "node tools/generate-icon.mjs",
     "playwright:install": "playwright install chromium",
-    "build-api": "npm install && npx playwright install chromium --with-deps",
     "build": "vite build",
     "electron:pack:win": "npm run icon:generate && npm run build && electron-builder --win --dir",
     "electron:patch:exe": "node tools/patch-exe-icon.mjs",

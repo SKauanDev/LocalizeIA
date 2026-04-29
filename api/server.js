@@ -3,7 +3,11 @@ import express from 'express'
 import { scrapeGoogleMapsLeads } from '../electron/scraper.js'
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: '*', // Permite qualquer origem
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 app.use(express.json({ limit: '1mb' }))
 
 const port = process.env.PORT || process.env.LEADS_API_PORT || 3030;

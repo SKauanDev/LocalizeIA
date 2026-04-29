@@ -1,4 +1,3 @@
-import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -10,14 +9,6 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        app: resolve(__dirname, 'app/index.html'),
-        site: resolve(__dirname, 'site/index.html'),
-      },
-    },
-  },
+  // Removemos o build/rollupOptions/input complexo daqui
   plugins: [react()],
 })

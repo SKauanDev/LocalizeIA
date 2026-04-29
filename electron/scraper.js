@@ -272,27 +272,38 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       
       cards.forEach((card) => {
         const name = card.querySelector('.fontHeadlineSmall')?.textContent || 'Empresa sem nome';
-        
-        // O endereço geralmente é a primeira div com texto após o nome
         const allDivs = Array.from(card.querySelectorAll('.fontBodyMedium div')).map(el => el.textContent);
         
-        // Filtra para remover notas (ex: "4.5 (120)") e focar no que parece endereço
-        const possibleAddress = allDivs.find(t => t.length > 10 && !t.includes('(')) || '-';
-        
-        // Telefone costuma ter o formato de (XX) XXXX-XXXX
+        // 1. Captura o Telefone (Busca por padrão de números)
         const phone = allDivs.find(t => /\(\d{2}\)/.test(t)) || '-';
 
-        // Tenta pegar o link do site se estiver visível no card
+        // 2. Captura o Site/Link que estiver no card
         const website = card.querySelector('a[aria-label*="website"], a[href^="http"]')?.getAttribute('href') || '-';
+
+        // 3. Lógica para gerar Link do WhatsApp
+        let whatsapp = '-';
+        
+        // Se o site for um link direto de WhatsApp, usamos ele
+        if (website.includes('wa.me') || website.includes('api.whatsapp.com')) {
+          whatsapp = website;
+        } 
+        // Se tivermos um telefone, tentamos converter para link de WhatsApp
+        else if (phone !== '-') {
+          const onlyNums = phone.replace(/\D/g, ''); // Remove ( ) - e espaços
+          // Verifica se tem cara de celular brasileiro (9 dígitos após o DDD)
+          if (onlyNums.length >= 10) {
+            whatsapp = `https://wa.me/55${onlyNums}`;
+          }
+        }
 
         if (name !== 'Empresa sem nome') {
           results.push({
             companyName: name,
             phone: phone,
-            address: possibleAddress,
+            whatsapp: whatsapp, // Novo campo!
             website: website,
-            instagram: website.includes('instagram.com') ? website : '-',
-            source: 'Google Maps (Busca Otimizada)'
+            address: allDivs.find(t => t.length > 10 && !t.includes('(')) || '-',
+            source: 'Google Maps (Extração Direta)'
           });
         }
       });

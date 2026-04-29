@@ -10,9 +10,9 @@ const SEARCH_TIMEOUT_MS = 20000;
 const PANEL_TIMEOUT_MS = 8000;
 const DETAIL_TIMEOUT_MS = 8000;
 const TOTAL_SCRAPE_BUDGET_MS = 90000;
-const MAX_RESULTS = 15;
-const MAX_SCROLL_STEPS = 10;
-const MAX_DETAIL_RESULTS = 6;
+const MAX_RESULTS = 24;
+const MAX_SCROLL_STEPS = 14;
+const MAX_DETAIL_RESULTS = 8;
 
 async function safeText(locator) {
   try {
@@ -30,6 +30,23 @@ async function safeAttribute(locator, attr) {
   } catch {
     return null;
   }
+}
+
+function normalizePhone(rawPhone) {
+  if (!rawPhone || rawPhone === '-') {
+    return '-';
+  }
+
+  const onlyDigits = rawPhone.replace(/\D/g, '');
+  if (onlyDigits.length === 11) {
+    return onlyDigits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+
+  if (onlyDigits.length === 10) {
+    return onlyDigits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  }
+
+  return rawPhone;
 }
 
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
@@ -93,27 +110,56 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       console.log('Aviso: Feed de resultados nao encontrado ou busca sem retorno.');
     }
 
-    const placeLinks = await page.evaluate(({ maxRes }) => {
-      const links = [];
+    const listEntries = await page.evaluate(({ maxRes }) => {
+      const entries = [];
       const seen = new Set();
-      const anchors = document.querySelectorAll('div[role="feed"] a[href*="/place/"]');
+      const cards = document.querySelectorAll('div[role="article"]');
 
-      for (const anchor of anchors) {
-        if (links.length >= maxRes) break;
+      for (const card of cards) {
+        if (entries.length >= maxRes) break;
 
-        const href = anchor.getAttribute('href');
+        const anchor = card.querySelector('a[href*="/place/"]');
+        const href = anchor?.getAttribute('href');
         if (!href || seen.has(href)) {
           continue;
         }
 
         seen.add(href);
-        links.push(href);
+
+        const name =
+          card.querySelector('.fontHeadlineSmall')?.textContent?.trim() ||
+          card.querySelector('.fontHeadlineLarge')?.textContent?.trim() ||
+          'Empresa sem nome';
+
+        const rawText = card.innerText || '';
+        const phoneMatch = rawText.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/);
+        const phone = phoneMatch ? normalizePhone(phoneMatch[0]) : '-';
+
+        const textParts = Array.from(card.querySelectorAll('.fontBodyMedium span, .fontBodyMedium div'))
+          .map((element) => element.textContent?.trim())
+          .filter(Boolean);
+
+        const address = textParts.find((text) =>
+          text.length > 10 &&
+          !text.includes('·') &&
+          !text.includes('aberto') &&
+          !text.includes('fechado') &&
+          text !== name
+        ) || '-';
+
+        entries.push({
+          href,
+          companyName: name,
+          phone,
+          address,
+          source: 'Google Maps'
+        });
       }
 
-      return links;
+      return entries;
     }, { maxRes: MAX_RESULTS });
 
-    if (placeLinks.length === 0) {
+    if (listEntries.length === 0) {
       return [];
     }
 
@@ -129,13 +175,13 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
 
     const leads = [];
 
-    for (const placeLink of placeLinks.slice(0, MAX_DETAIL_RESULTS)) {
+    for (const entry of listEntries.slice(0, MAX_DETAIL_RESULTS)) {
       if (Date.now() - startedAt >= TOTAL_SCRAPE_BUDGET_MS) {
         break;
       }
 
       try {
-        await detailPage.goto(placeLink, {
+        await detailPage.goto(entry.href, {
           waitUntil: 'domcontentloaded',
           timeout: DETAIL_TIMEOUT_MS
         });
@@ -151,23 +197,52 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
           (await safeText(detailPage.locator('button[data-item-id^="phone:tel:"] div.fontBodyMedium'))) ||
           (await safeText(detailPage.locator('button[data-item-id*="phone"] div.fontBodyMedium'))) ||
           (await safeAttribute(detailPage.locator('button[data-item-id^="phone:tel:"]'), 'data-item-id'))?.replace(/^phone:tel:/, '') ||
-          '-';
+          entry.phone;
 
         const address =
           (await safeText(detailPage.locator('button[data-item-id="address"] div.fontBodyMedium'))) ||
           (await safeText(detailPage.locator('button[data-item-id*="address"] div.fontBodyMedium'))) ||
-          '-';
+          entry.address;
 
         if (name !== 'Empresa sem nome') {
           leads.push({
             companyName: name,
-            phone,
+            phone: normalizePhone(phone),
             address,
             source: 'Google Maps'
           });
         }
       } catch {
-        // Ignora falhas individuais e segue.
+        if (entry.companyName !== 'Empresa sem nome') {
+          leads.push({
+            companyName: entry.companyName,
+            phone: entry.phone,
+            address: entry.address,
+            source: entry.source
+          });
+        }
+      }
+    }
+
+    if (leads.length < MAX_DETAIL_RESULTS) {
+      const seenNames = new Set(leads.map((lead) => `${lead.companyName}|${lead.address}`));
+      for (const entry of listEntries) {
+        if (leads.length >= MAX_DETAIL_RESULTS) {
+          break;
+        }
+
+        const key = `${entry.companyName}|${entry.address}`;
+        if (seenNames.has(key) || entry.companyName === 'Empresa sem nome') {
+          continue;
+        }
+
+        seenNames.add(key);
+        leads.push({
+          companyName: entry.companyName,
+          phone: entry.phone,
+          address: entry.address,
+          source: entry.source
+        });
       }
     }
 

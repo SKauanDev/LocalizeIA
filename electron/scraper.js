@@ -1,4 +1,4 @@
-﻿import { chromium } from 'playwright'
+import { chromium } from 'playwright'
 import { existsSync } from 'node:fs'
 
 const USER_AGENTS = [
@@ -217,141 +217,79 @@ async function extractLeadFromDetailPage(detailPage, queryLabel) {
   }
 }
 
+
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
-  if (!niche || !city || !uf) {
-    throw new Error('Parametros obrigatorios: niche, city, uf');
-  }
+  if (!niche || !city || !uf) throw new Error('Parâmetros obrigatórios ausentes');
 
-  // 1. DECLARAR A VARIÁVEL APENAS UMA VEZ
   let browser;
-
   try {
-    // 2. INICIALIZAR COM ARGUMENTOS DE ECONOMIA DE MEMÓRIA
-    // Usei os argumentos que cabem nos 512MB do Render
     browser = await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Crítico para o Render
+        '--disable-dev-shm-usage',
+        '--single-process',
         '--disable-gpu',
-        '--no-zygote',
-        '--single-process', // Economiza muita RAM
-        '--disable-extensions',
+        '--no-zygote'
       ]
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Erro ao iniciar navegador: ${message}`);
-  }
 
-  const query = `${niche} em ${city}, ${uf}`;
-  const userAgent = pickRandomUserAgent();
-
-  try {
     const context = await browser.newContext({
-      userAgent,
-      viewport: { width: 800, height: 600 },
-      locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo',
+      viewport: { width: 800, height: 600 }
     });
 
-    const listPage = await context.newPage();
-    
-    // BLOQUEADOR DE IMAGENS (Essencial para não estourar a RAM no Render)
-    await listPage.route('**/*', (route) => {
+    const page = await context.newPage();
+
+    // BLOQUEIO TOTAL DE PESO MORTO
+    await page.route('**/*', (route) => {
       const type = route.request().resourceType();
-      const url = route.request().url();
-
-      // 1. Bloqueia por tipo de recurso
-      if (['image', 'media', 'font'].includes(type)) {
+      if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
         return route.abort().catch(() => {});
       }
-
-      // 2. Bloqueia por URL (trackers e analytics)
-      if (url.includes('google-analytics') || url.includes('doubleclick') || url.includes('fonts.')) {
-        return route.abort().catch(() => {});
-      }
-
-      // 3. Se não entrou nos filtros acima, continua
       return route.continue().catch(() => {});
     });
 
-    listPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
-
-    await listPage.goto('https://www.google.com.br/maps', {
+    const query = encodeURIComponent(`${niche} em ${city}, ${uf}`);
+    await page.goto(`https://www.google.com.br/maps/search/${query}`, {
       waitUntil: 'domcontentloaded',
-      timeout: SEARCH_TIMEOUT_MS,
+      timeout: 30000
     });
 
-    await acceptConsentIfPresent(listPage);
+    // Espera a lista de resultados carregar
+    await page.waitForSelector('div[role="feed"]', { timeout: 15000 });
 
-    const searchInput = listPage.locator('#searchboxinput');
-    const inputVisible = await searchInput.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (inputVisible) {
-      await searchInput.fill(query);
-      await searchInput.press('Enter');
-    } else {
-      const searchUrl = `https://www.google.com.br/maps/search/${encodeURIComponent(query)}`;
-      await listPage.goto(searchUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: SEARCH_TIMEOUT_MS,
-      });
-      await acceptConsentIfPresent(listPage);
-    }
-
-    const feed = listPage.locator('div[role="feed"]').first();
-    await feed.waitFor({ timeout: SEARCH_TIMEOUT_MS });
-
-    const placeLinks = await collectUniquePlaceLinks(listPage);
-
-    if (placeLinks.length === 0) {
-      await context.close();
-      return [];
-    }
-
-    const detailPage = await context.newPage();
-    
-    // Bloquear imagens na página de detalhes também
-    await detailPage.route('**/*', (route) => {
-      if (['image', 'media', 'font'].includes(route.request().resourceType())) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
-
-    detailPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
-
-    const leads = [];
-    // Limitar para no máximo 10 leads no plano FREE para não travar
-    const limitedLinks = placeLinks.slice(0, 10);
-
-    for (const placeLink of limitedLinks) {
-      try {
-        await detailPage.goto(placeLink, {
-          waitUntil: 'domcontentloaded',
-          timeout: SEARCH_TIMEOUT_MS,
+    // EXTRAÇÃO DIRETA DA LISTA (Sem clicar em nada)
+    const leads = await page.evaluate(() => {
+      const results = [];
+      const cards = document.querySelectorAll('div[role="article"]'); // Seleciona os cards de empresa
+      
+      cards.forEach((card) => {
+        const name = card.querySelector('div.fontHeadlineSmall')?.textContent || 'Empresa sem nome';
+        const info = card.querySelectorAll('div.fontBodyMedium');
+        
+        // O Google coloca telefone e endereço em divs com a mesma classe na lista
+        let phone = '-';
+        let address = '-';
+        
+        info.forEach(el => {
+          const text = el.textContent || '';
+          if (text.includes('(') && text.match(/\d/)) phone = text; // Tenta identificar telefone
+          if (text.length > 10 && !text.includes('(')) address = text; // Tenta identificar endereço
         });
-        await detailPage.locator('h1').first().waitFor({ timeout: PANEL_TIMEOUT_MS });
-        const lead = await extractLeadFromDetailPage(detailPage, `${city}/${uf}`);
-        if (isUsefulLead(lead)) {
-          leads.push(lead);
-        }
-      } catch {
-        // Ignora falhas individuais
-      }
-    }
 
-    await detailPage.close();
-    await context.close();
+        results.push({
+          companyName: name,
+          phone: phone,
+          address: address,
+          website: '-', // Na lista lateral o link do site raramente é visível
+          source: 'Google Maps (Lista Rápida)'
+        });
+      });
+      return results;
+    });
 
-    return dedupeLeads(leads);
+    return leads.slice(0, 15); // Retorna até 15 leads encontrados na lista
   } finally {
-    // 3. FECHAR O NAVEGADOR SEMPRE
-    if (browser) {
-      await browser.close();
-    }
+    if (browser) await browser.close();
   }
 }

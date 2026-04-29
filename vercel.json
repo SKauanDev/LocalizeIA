@@ -5,8 +5,12 @@
       "destination": "/site/index.html"
     },
     {
-      "source": "/app",
-      "destination": "/app/"
+      "source": "/web",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/web/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

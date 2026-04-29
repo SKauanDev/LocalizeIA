@@ -6,11 +6,13 @@ const USER_AGENTS = [
 ];
 
 // Configuracoes otimizadas para o Render Free (512MB)
-const SEARCH_TIMEOUT_MS = 30000;
-const PANEL_TIMEOUT_MS = 12000;
+const SEARCH_TIMEOUT_MS = 20000;
+const PANEL_TIMEOUT_MS = 8000;
+const DETAIL_TIMEOUT_MS = 8000;
+const TOTAL_SCRAPE_BUDGET_MS = 90000;
 const MAX_RESULTS = 15;
 const MAX_SCROLL_STEPS = 10;
-const MAX_DETAIL_RESULTS = 10;
+const MAX_DETAIL_RESULTS = 6;
 
 async function safeText(locator) {
   try {
@@ -34,6 +36,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   if (!niche || !city || !uf) throw new Error('Parametros invalidos');
 
   let browser;
+  const startedAt = Date.now();
   try {
     browser = await chromium.launch({
       headless: true,
@@ -127,10 +130,14 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     const leads = [];
 
     for (const placeLink of placeLinks.slice(0, MAX_DETAIL_RESULTS)) {
+      if (Date.now() - startedAt >= TOTAL_SCRAPE_BUDGET_MS) {
+        break;
+      }
+
       try {
         await detailPage.goto(placeLink, {
           waitUntil: 'domcontentloaded',
-          timeout: SEARCH_TIMEOUT_MS
+          timeout: DETAIL_TIMEOUT_MS
         });
 
         await detailPage.locator('h1').first().waitFor({ timeout: PANEL_TIMEOUT_MS });

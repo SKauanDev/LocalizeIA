@@ -98,7 +98,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         if (name !== 'Empresa sem nome') {
           results.push({
             companyName: name,
-            phone: phone, // O seu front-end precisa disso para o WhatsApp
+            phone: phone, // O seu front-end precisa disso para o WhatsApp funcionar
             address: address, // O seu front-end precisa disso para o campo endereço
             source: 'Google Maps'
           });

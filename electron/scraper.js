@@ -217,7 +217,6 @@ async function extractLeadFromDetailPage(detailPage, queryLabel) {
   }
 }
 
-
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
   if (!niche || !city || !uf) throw new Error('Parâmetros inválidos');
 
@@ -230,80 +229,61 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         '--disable-dev-shm-usage',
         '--single-process',
         '--disable-gpu',
+        '--no-zygote'
       ]
     });
 
-    // CORREÇÃO DO ERRO DE NOTIFICAÇÃO: Concede permissão falsa para o Maps não tentar criar notificações
     const context = await browser.newContext({
-      viewport: { width: 1000, height: 800 },
-      permissions: ['notifications'] 
+      viewport: { width: 1280, height: 800 }, // Viewport desktop para forçar exibição de telefones
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     });
 
     const page = await context.newPage();
 
-    // Bloqueio de peso (Mantido para economizar RAM)
+    // Bloqueio agressivo de recursos (RAM Safe)
     await page.route('**/*', (route) => {
       const type = route.request().resourceType();
-      if (['image', 'font', 'media'].includes(type)) return route.abort().catch(() => {});
+      if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+        return route.abort().catch(() => {});
+      }
       return route.continue().catch(() => {});
     });
 
     const query = encodeURIComponent(`${niche} em ${city}, ${uf}`);
     await page.goto(`https://www.google.com.br/maps/search/${query}`, {
-      waitUntil: 'networkidle', // Espera um pouco mais para os dados carregarem
+      waitUntil: 'networkidle', 
       timeout: 30000
     });
 
-    // Rola um pouco o feed para carregar mais dados
-    const feedSelector = 'div[role="feed"]';
-    try {
-      await page.waitForSelector(feedSelector, { timeout: 10000 });
-      await page.evaluate((sel) => {
-        const el = document.querySelector(sel);
-        if (el) el.scrollBy(0, 1000);
-      }, feedSelector);
-      await page.waitForTimeout(1000);
-    } catch (e) {}
-
-    // EXTRAÇÃO COM SELETORES MELHORADOS
     const leads = await page.evaluate(() => {
       const results = [];
       const cards = document.querySelectorAll('div[role="article"]');
       
       cards.forEach((card) => {
         const name = card.querySelector('.fontHeadlineSmall')?.textContent || 'Empresa sem nome';
-        const allDivs = Array.from(card.querySelectorAll('.fontBodyMedium div')).map(el => el.textContent);
         
-        // 1. Captura o Telefone (Busca por padrão de números)
-        const phone = allDivs.find(t => /\(\d{2}\)/.test(t)) || '-';
+        // Coleta todos os textos do card para caçar o telefone
+        const allTexts = Array.from(card.querySelectorAll('span, div'))
+          .map(el => el.textContent.trim());
+        
+        // Busca o Telefone (padrão brasileiro com DDD)
+        const phone = allTexts.find(t => /\(\d{2}\)\s\d/.test(t)) || '-';
 
-        // 2. Captura o Site/Link que estiver no card
-        const website = card.querySelector('a[aria-label*="website"], a[href^="http"]')?.getAttribute('href') || '-';
-
-        // 3. Lógica para gerar Link do WhatsApp
+        // Lógica simplificada: se achou telefone, cria link de Zap
         let whatsapp = '-';
-        
-        // Se o site for um link direto de WhatsApp, usamos ele
-        if (website.includes('wa.me') || website.includes('api.whatsapp.com')) {
-          whatsapp = website;
-        } 
-        // Se tivermos um telefone, tentamos converter para link de WhatsApp
-        else if (phone !== '-') {
-          const onlyNums = phone.replace(/\D/g, ''); // Remove ( ) - e espaços
-          // Verifica se tem cara de celular brasileiro (9 dígitos após o DDD)
+        if (phone !== '-') {
+          const onlyNums = phone.replace(/\D/g, '');
           if (onlyNums.length >= 10) {
             whatsapp = `https://wa.me/55${onlyNums}`;
           }
         }
 
-        if (name !== 'Empresa sem nome') {
+        if (name !== 'Empresa sem nome' && whatsapp !== '-') {
           results.push({
             companyName: name,
             phone: phone,
-            whatsapp: whatsapp, // Novo campo!
-            website: website,
-            address: allDivs.find(t => t.length > 10 && !t.includes('(')) || '-',
-            source: 'Google Maps (Extração Direta)'
+            whatsapp: whatsapp,
+            source: 'Google Maps (Foco WhatsApp)'
           });
         }
       });

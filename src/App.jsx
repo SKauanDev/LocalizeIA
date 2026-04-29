@@ -450,29 +450,7 @@ function App() {
                     </div>
 
                     <div>
-                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Instagram</p>
-                      {lead.instagram !== '-' ? (
-                        <a href={lead.instagram} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-cyan-200">
-                          Abrir Instagram
-                        </a>
-                      ) : (
-                        <span className="text-slate-500">-</span>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Site</p>
-                      {lead.website !== '-' ? (
-                        <a href={lead.website} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-cyan-200">
-                          Site
-                        </a>
-                      ) : (
-                        <span className="text-slate-500">-</span>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Endereco</p>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Endereço</p>
                       <p className="text-slate-300">{lead.address || '-'}</p>
                     </div>
                   </div>

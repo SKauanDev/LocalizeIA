@@ -442,7 +442,7 @@ function App() {
                           rel="noreferrer"
                           className="text-emerald-300 hover:text-emerald-200"
                         >
-                          {lead.phone}
+                          Redirecionar pro zap
                         </a>
                       ) : (
                         <span className="text-slate-500">-</span>
@@ -490,7 +490,7 @@ function App() {
                             rel="noreferrer"
                             className="text-emerald-300 hover:text-emerald-200"
                           >
-                            {lead.phone}
+                            Redirecionar pro zap
                           </a>
                         ) : (
                           <span className="text-slate-500">-</span>

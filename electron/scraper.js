@@ -324,7 +324,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         seenNames.add(key);
         leads.push({
           companyName: entry.companyName,
-          phone: entry.phone,
+          phone: buildWhatsAppUrl(entry.phone) !== '-' ? buildWhatsAppUrl(entry.phone) : entry.phone,
           address: entry.address,
           source: entry.source
         });

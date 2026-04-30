@@ -49,6 +49,23 @@ function normalizePhone(rawPhone) {
   return rawPhone;
 }
 
+function buildWhatsAppUrl(rawPhone) {
+  if (!rawPhone || rawPhone === '-') {
+    return '-';
+  }
+
+  let digits = rawPhone.replace(/\D/g, '');
+  if (!digits) {
+    return '-';
+  }
+
+  if (!digits.startsWith('55')) {
+    digits = `55${digits}`;
+  }
+
+  return `https://wa.me/${digits}`;
+}
+
 async function extractPhoneFromDetailPage(detailPage, fallbackPhone = '-') {
   const directPhone =
     (await safeText(detailPage.locator('button[data-item-id^="phone:tel:"] div.fontBodyMedium'))) ||
@@ -98,6 +115,26 @@ async function extractPhoneFromDetailPage(detailPage, fallbackPhone = '-') {
   }).catch(() => null);
 
   return normalizePhone(extractedPhone || fallbackPhone);
+}
+
+async function extractContactLinkFromDetailPage(detailPage, fallbackPhone = '-') {
+  const telHref =
+    (await safeAttribute(detailPage.locator('a[href^="tel:"]'), 'href')) ||
+    (await safeAttribute(detailPage.locator('button[data-item-id^="phone:tel:"]'), 'data-item-id')) ||
+    (await safeAttribute(detailPage.locator('[data-item-id*="phone"]'), 'data-item-id'));
+
+  if (telHref) {
+    const normalizedHref = telHref
+      .replace(/^phone:tel:/, '')
+      .replace(/^tel:/, '');
+    const waLink = buildWhatsAppUrl(normalizedHref);
+    if (waLink !== '-') {
+      return waLink;
+    }
+  }
+
+  const phone = await extractPhoneFromDetailPage(detailPage, fallbackPhone);
+  return buildWhatsAppUrl(phone);
 }
 
 export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
@@ -245,6 +282,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
           'Empresa sem nome';
 
         const phone = await extractPhoneFromDetailPage(detailPage, entry.phone);
+        const contactLink = await extractContactLinkFromDetailPage(detailPage, phone);
 
         const address =
           (await safeText(detailPage.locator('button[data-item-id="address"] div.fontBodyMedium'))) ||
@@ -254,7 +292,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         if (name !== 'Empresa sem nome') {
           leads.push({
             companyName: name,
-            phone,
+            phone: contactLink !== '-' ? contactLink : phone,
             address,
             source: 'Google Maps'
           });
@@ -263,7 +301,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
         if (entry.companyName !== 'Empresa sem nome') {
           leads.push({
             companyName: entry.companyName,
-            phone: entry.phone,
+            phone: buildWhatsAppUrl(entry.phone) !== '-' ? buildWhatsAppUrl(entry.phone) : entry.phone,
             address: entry.address,
             source: entry.source
           });

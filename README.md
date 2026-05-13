@@ -51,3 +51,18 @@ npm run dev:full
 ```bash
 npm run electron:build
 ```
+
+## Deploy Docker / Back4App
+O container foi configurado para rodar apenas a API usada pelo mobile:
+
+```bash
+docker build -t localizeia-api .
+docker run --rm -p 3030:3030 localizeia-api
+```
+
+No Back4App, use o `Dockerfile` da raiz do projeto. A aplicacao escuta em `0.0.0.0` e usa a variavel `PORT` quando a plataforma definir uma porta automaticamente.
+
+Endpoint de saude:
+```text
+GET /health
+```

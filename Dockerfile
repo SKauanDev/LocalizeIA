@@ -1,6 +1,9 @@
 # Usando uma imagem leve do Node
 FROM node:18-slim
 
+# Adicione esta linha antes do CMD
+EXPOSE 3000
+
 # Instalar dependências necessárias para o Chromium rodar no Linux
 RUN apt-get update && apt-get install -y \
     fonts-liberation \
@@ -49,6 +52,7 @@ RUN npm install
 
 # Copiar o resto do código
 COPY . .
+
 
 # Comando para rodar a aplicação
 CMD ["npm", "start"]

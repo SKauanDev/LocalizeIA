@@ -10,7 +10,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }))
 
-const port = process.env.PORT || process.env.LEADS_API_PORT || 3030;
+const port = process.env.PORT || process.env.LEADS_API_PORT || 3000;
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'localizeia-leads-api' })

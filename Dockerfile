@@ -1,58 +1,31 @@
-# Usando uma imagem leve do Node
-FROM node:18-slim
+# 1. Usar o Node 22 (mais estável para as versões novas do Playwright)
+FROM node:22-slim
 
-# Adicione esta linha antes do CMD
-EXPOSE 3000
-
-# Instalar dependências necessárias para o Chromium rodar no Linux
-RUN apt-get update && apt-get install -y \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    lsb-release \
-    wget \
-    xdg-utils \
-    --no-install-recommends && rm -rf /var/lib/apt/lists/*
-
-# Definir diretório de trabalho
+# 2. Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos e instalar dependências do seu projeto
+# 3. Instalar dependências básicas do sistema
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    --no-install-recommends
+
+# 4. Copiar arquivos de dependências
 COPY package*.json ./
+
+# 5. Instalar as dependências do seu projeto (Express, Playwright, etc)
 RUN npm install
 
-# Copiar o resto do código
+# 6. COMANDO ESSENCIAL: Instala o Chromium e todas as bibliotecas que ele precisa
+# O flag --with-deps já instala todas aquelas 'libasound', 'libatk', etc. automaticamente
+RUN npx playwright install chromium --with-deps
+
+# 7. Copiar o resto do código
 COPY . .
 
+# 8. Expor a porta 3000
+EXPOSE 3000
 
-# Comando para rodar a aplicação
+# 9. Comando para rodar a aplicação
 CMD ["npm", "start"]

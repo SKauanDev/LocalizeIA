@@ -146,13 +146,20 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     browser = await chromium.launch({
       headless: true,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--disable-gpu',
-        '--no-zygote',
-        '--disable-extensions'
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process',
+      '--no-zygote',
+      '--disable-gpu',
+      '--disable-audio-output',
+      '--disable-software-rasterizer',
+      '--disable-default-apps',
+      '--disable-background-networking',
+      '--disable-sync',
+      '--disable-translate',
+      '--metrics-recording-only',
+      '--no-first-run'
       ]
     });
 
@@ -169,7 +176,7 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
     await page.route('**/*', (route) => {
       const type = route.request().resourceType();
       const url = route.request().url();
-      if (['image', 'media', 'font'].includes(type)) {
+      if (['image', 'media', 'stylesheet','font'].includes(type)) {
         return route.abort().catch(() => {});
       }
       if (url.includes('google-analytics') || url.includes('doubleclick') || url.includes('fonts.')) {
@@ -251,7 +258,8 @@ export async function scrapeGoogleMapsLeads({ niche, city, uf }) {
       return [];
     }
 
-    const detailPage = await context.newPage();
+  //const detailPage = await context.newPage();
+    const detailPage = page;
     detailPage.setDefaultTimeout(PANEL_TIMEOUT_MS);
     await detailPage.route('**/*', (route) => {
       const type = route.request().resourceType();

@@ -8,6 +8,7 @@ app.use(cors({
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
+app.options('*', cors());
 app.use(express.json({ limit: '1mb' }))
 
 const port = process.env.PORT || process.env.LEADS_API_PORT || 3000;

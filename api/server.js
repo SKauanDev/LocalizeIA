@@ -4,11 +4,16 @@ import { scrapeGoogleMapsLeads } from '../electron/scraper.js'
 
 const app = express()
 app.use(cors({
-  origin: '*', // Permite qualquer origem
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
-app.options('*', cors());
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 app.use(express.json({ limit: '1mb' }))
 
 const port = process.env.PORT || process.env.LEADS_API_PORT || 3000;
